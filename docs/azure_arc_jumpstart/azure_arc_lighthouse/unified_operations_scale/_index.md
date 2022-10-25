@@ -18,14 +18,14 @@ This guide provides an overview of how managed service providers or any multi-te
 
 ### Management across tenants
 
-[Azure Lighthouse](https://docs.microsoft.com/en-us/azure/lighthouse/overview) is an Azure service that enables cross and multi-tenant management providing greater visibility and scale into operations. Azure Lighthouse uses an Azure Resource Provider that brings the Azure Delegated Resource Management capability by logically projecting resources from one tenant onto another and unlocking cross-tenant management without the need to do context switching.
+[Azure Lighthouse](https://docs.microsoft.com/azure/lighthouse/overview) is an Azure service that enables cross and multi-tenant management providing greater visibility and scale into operations. Azure Lighthouse uses an Azure Resource Provider that brings the Azure Delegated Resource Management capability by logically projecting resources from one tenant onto another and unlocking cross-tenant management without the need to do context switching.
 
 This service is very valuable for service providers as they can realize efficiencies in their offerings using Azure’s operations and management tools for multiple customers, however, it is as useful to customers that may have multiple Azure AD tenants (e.g. multiple subsidiaries or geographies in separate tenants).
 
 To get started with Azure Lighthouse you can onboard a managed tenant using the Azure Delegated resource management. The onboarding process can be done in two different ways:
 
-- [Using an ARM template](https://docs.microsoft.com/en-us/azure/lighthouse/how-to/onboard-customer#create-an-azure-resource-manager-template)
-- [Publishing a Managed Service offer to the Azure Marketplace](https://docs.microsoft.com/en-us/azure/lighthouse/how-to/publish-managed-services-offers)
+- [Using an ARM template](https://docs.microsoft.com/azure/lighthouse/how-to/onboard-customer#create-an-azure-resource-manager-template)
+- [Publishing a Managed Service offer to the Azure Marketplace](https://docs.microsoft.com/azure/lighthouse/how-to/publish-managed-services-offers)
 
 After you finish the onboarding process you will have a central management tenant, in this scenario Contoso, that will aggregate the information from multiple customers: Microsoft, Fabrikam, and Fourth Coffee.
 
@@ -35,7 +35,7 @@ After you finish the onboarding process you will have a central management tenan
 
 Once you have centralized all operations in Azure using Lighthouse and Azure's Operations and Management tools, you can stretch these services to run across on-premises, other clouds, or the edge.
 
-With Azure Arc, your on-premises and other cloud deployments become an Azure Resource Manager entity and as such, servers, Kubernetes clusters, or data services can be treated as first-class citizens of Azure.  As with any other ARM resource, they can be organized into resource groups and subscriptions, use tags, policies, assign RBAC, and can even leverage Azure Arc to onboard other services such as Azure Monitoring, Azure Security Center, Azure Sentinel, or Azure Automation.
+With Azure Arc, your on-premises and other cloud deployments become an Azure Resource Manager entity and as such, servers, Kubernetes clusters, or data services can be treated as first-class citizens of Azure.  As with any other ARM resource, they can be organized into resource groups and subscriptions, use tags, policies, assign RBAC, and can even leverage Azure Arc to onboard other services such as Azure Monitoring, Azure Security Center, Microsoft Sentinel, or Azure Automation.
 
 ![Azure Lighthouse and Azure Arc Diagram](./02.png)
 
@@ -47,11 +47,11 @@ Azure Policy provides the mechanism to enforce corporate standards and to assess
 
 ![Azure Policy and Azure Lighthouse](./03.png)
 
-With Azure Arc you can even take it a step further as now Azure Policies can be assigned to Azure Arc enabled servers and Kubernetes, this way you can apply the same set of policies across hybrid and multi-cloud resources to entirely manage governance and guarantee corporate compliance.
+With Azure Arc you can even take it a step further as now Azure Policies can be assigned to Azure Arc-enabled servers and Kubernetes, this way you can apply the same set of policies across hybrid and multi-cloud resources to entirely manage governance and guarantee corporate compliance.
 
 ![Azure Policy and Azure Arc](./04.png)
 
-Your Azure Arc enabled resources should be registered on a managed tenant so you can centrally manage compliance from the Azure Lighthouse-powered tenant. To work with Azure Arc and Azure Policies check out these Jumpstart scenarios:
+Your Azure Arc-enabled resources should be registered on a managed tenant so you can centrally manage compliance from the Azure Lighthouse-powered tenant. To work with Azure Arc and Azure Policies check out these Jumpstart scenarios:
 
 - [Deploy Monitoring Agent Extension to Azure Arc Linux and Windows servers using Azure Policy](https://azurearcjumpstart.io/azure_arc_jumpstart/azure_arc_servers/day2/arc_policies_mma/)
 - [Apply GitOps configurations on AKS as an Azure Arc Connected Cluster using Azure Policy for Kubernetes](https://azurearcjumpstart.io/azure_arc_jumpstart/azure_arc_k8s/day2/aks/aks_policy/#apply-gitops-configurations-on-aks-as-an-azure-arc-connected-cluster-using-azure-policy-for-kubernetes)
@@ -59,15 +59,15 @@ Your Azure Arc enabled resources should be registered on a managed tenant so you
 
 ### Inventory Management
 
-By using Azure Arc, your on-premises and multi-cloud resources become part of Azure Resource Manager and therefore you can use tools such as Azure Resource Graph as a way to explore your inventory at scale.  Your Azure Resource Graph queries can now include Azure Arc enabled resources with filtering, using tags, or tracking changes.
+By using Azure Arc, your on-premises and multi-cloud resources become part of Azure Resource Manager and therefore you can use tools such as Azure Resource Graph as a way to explore your inventory at scale.  Your Azure Resource Graph queries can now include Azure Arc-enabled resources with filtering, using tags, or tracking changes.
 
 For multitenant organizations, this service also supports Azure Lighthouse to allow you to query resources in a managed tenant.
 
 ![Azure Resource Graph at scale](./05.png)
 
-To explore this use case, use this Jumpstart scenario to work with tagged Azure Arc enabled servers in your managed tenants:
+To explore this use case, use this Jumpstart scenario to work with tagged Azure Arc-enabled servers in your managed tenants:
 
-- [Apply inventory tagging to Azure Arc enabled servers](https://azurearcjumpstart.io/azure_arc_jumpstart/azure_arc_servers/day2/arc_inventory_tagging/)
+- [Azure Arc-enabled servers inventory management using Resource Graph Explorer](https://azurearcjumpstart.io/azure_arc_jumpstart/azure_arc_servers/day2/arc_inventory_management/#apply-resource-tags-to-azure-arc-enabled-servers)
 
 ### Monitoring and Alerting
 
@@ -88,13 +88,13 @@ Use these Jumpstart scenarios to integrate Azure Monitor and Azure Arc in your m
 
 ### Hybrid Services Onboarding at Scale
 
-In the Contoso scenario, you will centrally manage at scale infrastructure and services that are distributed, for the operations you will usually use services such as Azure Monitoring, Azure Automation, Azure Security Center, or Azure Sentinel. To work with these services you will need to deploy an agent on your Arc enabled resources and there are several ways you can do that:
+In the Contoso scenario, you will centrally manage at scale infrastructure and services that are distributed, for the operations you will usually use services such as Azure Monitoring, Azure Automation, Azure Security Center, or Microsoft Sentinel. To work with these services you will need to deploy an agent on your Arc-enabled resources and there are several ways you can do that:
 
 - Using a configuration management tool of your choice
 - Using Azure Policy and its remediation tasks
 - Azure Arc’s extension management capabilities
 
-The extension management feature for [Azure Arc enabled servers](https://docs.microsoft.com/en-us/azure/azure-arc/servers/manage-vm-extensions) and [Azure Arc enabled Kubernetes](https://docs.microsoft.com/en-us/azure/azure-arc/kubernetes/extensions) provides the same post-deployment configuration and automation tasks that you have for Azure VMs or Azure Kubernetes Service. With this feature, you can deploy small pieces of software to your Arc enabled resources in an automated fashion, onboarding to Azure Monitor, Azure Defender, DSC, or even deploy a custom script on your VMs.
+The extension management feature for [Azure Arc-enabled servers](https://docs.microsoft.com/azure/azure-arc/servers/manage-vm-extensions) and [Azure Arc-enabled Kubernetes](https://docs.microsoft.com/azure/azure-arc/kubernetes/extensions) provides the same post-deployment configuration and automation tasks that you have for Azure VMs or Azure Kubernetes Service. With this feature, you can deploy small pieces of software to your Arc-enabled resources in an automated fashion, onboarding to Azure Monitor, Azure Defender, DSC, or even deploy a custom script on your VMs.
 
 ![Azure Arc extension management](./08.png)
 
@@ -113,23 +113,23 @@ With Azure Lighthouse the managed tenant can view Azure Activity log data to see
 
 ![Azure Lighthouse RBAC](./09.png)
 
-If you are centralizing operations in Azure and this includes on-premises and multi-cloud resources with Azure Arc, you will want to also control access to these services. Access to Azure Arc enabled resources is controlled by standard Azure RBAC, so from Access Control (IAM) in the Azure portal you can verify who has access to your resources and any actions taken from Azure will also be reflected on the Activity log.
+If you are centralizing operations in Azure and this includes on-premises and multi-cloud resources with Azure Arc, you will want to also control access to these services. Access to Azure Arc-enabled resources is controlled by standard Azure RBAC, so from Access Control (IAM) in the Azure portal you can verify who has access to your resources and any actions taken from Azure will also be reflected on the Activity log.
 
 ![Azure Arc RBAC](./10.png)
 
-The fact that Azure Arc enabled resources are part of ARM and access is controlled by Azure RBAC means that you can also have delegated management via Lighthouse with full visibility and insights on operations.
+The fact that Azure Arc-enabled resources are part of ARM and access is controlled by Azure RBAC means that you can also have delegated management via Lighthouse with full visibility and insights on operations.
 
 ### Application and Data Management at Scale
 
-Contoso can use configuration as code and uniformly govern and deploy containerized applications using GitOps-based configurations across on-premises, multi-cloud, and edge. Contoso can link a cluster to a Git repo that becomes the single source of truth for container deployments and applications, Azure Arc enabled Kubernetes will make sure there is no drift between Git and what is running in the cluster.
+Contoso can use configuration as code and uniformly govern and deploy containerized applications using GitOps-based configurations across on-premises, multi-cloud, and edge. Contoso can link a cluster to a Git repo that becomes the single source of truth for container deployments and applications, Azure Arc-enabled Kubernetes will make sure there is no drift between Git and what is running in the cluster.
 
 ![Azure Arc GitOps](./11.png)
 
-Azure Arc enabled data services to allow Contoso to run Azure data services like Azure SQL Managed Instance and Azure Database for PostgreSQL Hyperscale on any Kubernetes cluster with unified management and familiar tools. With Azure Arc and Azure Lighthouse, Contoso is empowered to create cloud-native management operations with no location boundaries.
+Azure Arc-enabled data services to allow Contoso to run Azure data services like Azure SQL Managed Instance and Azure Database for PostgreSQL on any Kubernetes cluster with unified management and familiar tools. With Azure Arc and Azure Lighthouse, Contoso is empowered to create cloud-native management operations with no location boundaries.
 
 All of these data and application deployments can be done across organizations by using Azure Lighthouse delegated management features.
 
-To work with Azure Arc enabled data services and Azure Arc enabled Kubernetes check out these Jumpstart scenarios:
+To work with Azure Arc-enabled data services and Azure Arc-enabled Kubernetes check out these Jumpstart scenarios:
 
 - [Deploy GitOps configurations and perform basic GitOps flow on AKS on Azure Stack HCI as an Azure Arc Connected Cluster](https://azurearcjumpstart.io/azure_arc_jumpstart/azure_arc_k8s/day2/aks_stack_hci/aks_hci_gitops_basic/)
 - [Deploy GitOps configurations and perform Helm-based GitOps flow on AKS on Azure Stack HCI as an Azure Arc Connected Cluster](https://azurearcjumpstart.io/azure_arc_jumpstart/azure_arc_k8s/day2/aks_stack_hci/aks_hci_gitops_helm/)
@@ -137,7 +137,7 @@ To work with Azure Arc enabled data services and Azure Arc enabled Kubernetes ch
 - [Deploy GitOps configurations and perform Helm-based GitOps flow on GKE as an Azure Arc Connected Cluster](https://azurearcjumpstart.io/azure_arc_jumpstart/azure_arc_k8s/day2/gke/gke_gitops_helm/)
 -[Deploy GitOps configurations and perform Helm-based GitOps flow on kind as an Azure Arc Connected Cluster](https://azurearcjumpstart.io/azure_arc_jumpstart/azure_arc_k8s/day2/kind/local_kind_gitops_helm/)
 - [Deploy GitOps configurations and perform Helm-based GitOps flow on MicroK8s as an Azure Arc Connected Cluster](https://azurearcjumpstart.io/azure_arc_jumpstart/azure_arc_k8s/day2/microk8s/local_microk8s_gitops_helm/)
-- [Azure Arc enabled data services](https://azurearcjumpstart.io/azure_arc_jumpstart/azure_arc_data/)
+- [Azure Arc-enabled data services](https://azurearcjumpstart.io/azure_arc_jumpstart/azure_arc_data/)
 
 ### Summary
 

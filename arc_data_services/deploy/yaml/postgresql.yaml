@@ -1,22 +1,17 @@
 apiVersion: v1
 data:
+  username: <your base64 encoded username>
   password: <your base64 encoded password>
 kind: Secret
 metadata:
   name: pg1-login-secret
 type: Opaque
 ---
-apiVersion: arcdata.microsoft.com/v1beta1
-kind: postgresql
+apiVersion: arcdata.microsoft.com/v1beta2
+kind: PostgreSql
 metadata:
   name: pg1
 spec:
-  engine:
-    version: 12
-    extensions:
-    - name: citus
-  scale:
-    workers: 3
   scheduling:
     default:
       resources:

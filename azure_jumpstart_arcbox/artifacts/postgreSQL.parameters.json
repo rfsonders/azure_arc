@@ -17,7 +17,7 @@
         "admin": {
             "value": "postgres"
         },
-        "azdataPassword": {
+        "password": {
             "value": "azdataPassword-stage"
         },
         "namespace": {
@@ -26,11 +26,20 @@
         "serviceType": {
             "value": "serviceType-stage"
         },
-        "memoryRequest": {
-            "value": "memoryRequest-stage"
+        "coordinatorCoresRequest": {
+            "value": "coordinatorCoresRequest-stage"
+        },
+        "coordinatorCoresLimit": {
+            "value": "coordinatorCoresLimit-stage"
+        },
+        "coordinatorMemoryRequest": {
+            "value": "coordinatorMemoryRequest-stage"
+        },
+        "coordinatorMemoryLimit": {
+            "value": "coordinatorMemoryLimit-stage"
         },
         "postgresEngineVersion": {
-            "value": 12
+            "value": 14
         },
         "dataStorageSize": {
             "value": "dataSize-stage"
@@ -58,15 +67,8 @@
         "numWorkers": {
             "value": numWorkersStage
         },
-        "extensions": {
-            "value": [
-                {
-                    "name": "citus"
-                }
-            ]
-        },
         "apiVersion": {
-            "value": "2021-07-01-preview"
+            "value": "2022-03-01-preview"
         }
     }
 }

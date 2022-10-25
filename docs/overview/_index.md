@@ -7,7 +7,7 @@ weight: 1
 
 ## Azure Arc Jumpstart
 
-The Azure Arc Jumpstart project is designed to provide a "zero to hero" experience so you can start working with Azure Arc right away!
+The Azure Arc Jumpstart is designed to provide a "zero to hero" experience so you can start working with Azure Arc right away!
 
 The Jumpstart provides step-by-step guides for independent Azure Arc scenarios that incorporate as much automation as possible, detailed screenshots and code samples, and a rich and comprehensive experience while getting started with the Azure Arc platform.
 
@@ -27,9 +27,17 @@ Hop over to the [Jumpstart Scenarios](https://azurearcjumpstart.io/azure_arc_jum
 
 Have you ever wanted to have a complete Azure Arc environment with just one click? We've got you covered with ArcBox!
 
-[ArcBox](https://azurearcjumpstart.io/azure_jumpstart_arcbox/) is a dedicated sandbox environment for exploring all things Azure Arc, and the best part is that the only prerequisite is an Azure subscription. With a one-click deployment, you get a full Azure Arc lab packed with technology including Azure Arc enabled Servers, Kubernetes, Data Services and much more. Check out ArcBox today and start exploring a comprehensive hybrid sandbox powered by Azure Arc.
+[ArcBox](https://azurearcjumpstart.io/azure_jumpstart_arcbox/) is a dedicated sandbox environment for exploring all things Azure Arc, and the best part is that the only prerequisite is an Azure subscription. With a one-click deployment, you get a full Azure Arc lab packed with technology including Azure Arc-enabled Servers, Kubernetes, Data Services and much more. Check out ArcBox today and start exploring a comprehensive hybrid sandbox powered by Azure Arc.
 
 <p align="center"><a href="https://azurearcjumpstart.io/azure_jumpstart_arcbox/" target="_blank"><img src="/img/arcbox_logo.png" alt="jumpstart-arcbox-logo" width="250"></a></p>
+
+## Jumpstart HCIBox
+
+Are you eager to try out Azure Stack HCI but you don't have access to physical hardware? If so then HCIBox is the tool for you.
+
+[HCIBox](https://azurearcjumpstart.io/azure_jumpstart_hcibox/) is a dedicated Azure Stack HCI sandbox environment, and like ArcBox you only need an Azure subscription to get started. With a one-click deployment, you get a full Azure Stack HCI lab packed with technology including Azure Arc integration, Azure Kubernetes Service, Windows Admin Center and much more. Check out HCIBox today and start exploring a comprehensive hybrid sandbox powered by Azure Arc.
+
+<p align="center"><a href="https://azurearcjumpstart.io/azure_jumpstart_hcibox/" target="_blank"><img src="/img/hcibox_logo.png" alt="jumpstart-hcibox-logo" width="250"></a></p> 
 
 ## Jumpstart YouTube Channel
 
@@ -43,7 +51,7 @@ Oh, and one last thing before you go. Please consider subscribing to the channel
 
 Enjoy!
 
-## Jumpstart Lighting
+## Jumpstart Lightning
 
 Jumpstart Lightning is the show where you get a chance to share with our team and the world your Azure Arc, Jumpstart contribution and Hybrid cloud awesome stories. Who knows?! You might find yourself on our YouTube channel!
 
@@ -54,6 +62,12 @@ Jumpstart Lightning is the show where you get a chance to share with our team an
 * Do you have a unique Azure Arc demo and content to show-off?!
 
 What are you waiting for?! [Fill the submission form](https://forms.office.com/r/cyg2DduG1W) and if it’s snazzy enough, you will be hearing from us soon.
+
+## Diagrams
+
+Architecture diagrams and visualization are important so we wanted you to have our [validated Azure Hybrid diagrams](https://github.com/microsoft/azure_arc/blob/main/docs/ppt/diagrams.pptx) we use, you know, because we care!
+
+![diagrams](/img/diagrams.png)
 
 ## Azure Arc Overview
 
@@ -79,7 +93,7 @@ With Azure Arc, Fabrikam is able to project resources and register them into Azu
 
 ![architecture](/img/architecture_white.jpg)
 
-## Want to be an Azure Arc "Jumpstarter"?!
+## Want to be an Azure Arc "Jumpstarter"?
 
 We would love to have you! We are always looking for community support so if you want to create your own Azure Arc Jumpstart scenario, hop over to the [Jumpstart Scenario Writeup Guidelines](https://azurearcjumpstart.io/scenario_guidelines/) page to learn how to create one.
 

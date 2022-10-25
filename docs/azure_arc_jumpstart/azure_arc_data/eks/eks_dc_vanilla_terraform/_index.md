@@ -6,305 +6,306 @@ weight: 1
 description: >
 ---
 
-## Deploy an Azure Arc Data Controller (Vanilla) on EKS using Terraform
+## Deploy a vanilla Azure Arc Data Controller in a directly connected mode on EKS using Terraform
 
-The following README will guide you on how to deploy a "Ready to Go" environment so you can start using Azure Arc Data Services and deploy Azure data services on [Elastic Kubernetes Service (EKS)](https://aws.amazon.com/eks/) cluster, using [Terraform](https://www.terraform.io/).
+The following Jumpstart scenario will guide you on how to deploy a "Ready to Go" environment so you can start using Azure Arc Data Services and deploy Azure data services on [Elastic Kubernetes Service (EKS)](https://aws.amazon.com/eks/) cluster, using [Terraform](https://www.terraform.io/).
 
-By the end of this guide, you will have an EKS cluster deployed with an Azure Arc Data Controller and a Microsoft Windows Server 2019 (Datacenter) AWS EC2 instance VM, installed & pre-configured with all the required tools needed to work with Azure Arc Data Services.
-
-> **Note: Currently, Azure Arc enabled data services is in [public preview](https://docs.microsoft.com/en-us/azure/azure-arc/data/release-notes)**.
-
-## Deployment Process Overview
-
-* Create AWS IAM Role
-* Create & download AWS Key Pair
-* Clone the Azure Arc Jumpstart repository
-* Edit *TF_VAR* variables values
-* *terraform init*
-* *terraform apply*
-* EKS cleanup
-* *terraform destroy*
+By the end of this scenario, you will have an EKS cluster deployed with an Azure Arc Data Controller and a Microsoft Windows Server 2022 (Datacenter) AWS EC2 instance VM, installed & pre-configured with all the required tools needed to work with Azure Arc Data Services.
 
 ## Prerequisites
 
-* Clone the Azure Arc Jumpstart repository
+- Clone the Azure Arc Jumpstart repository
 
   ```shell
   git clone https://github.com/microsoft/azure_arc.git
   ```
 
-* [Install AWS IAM Authenticator](https://docs.aws.amazon.com/eks/latest/userguide/install-aws-iam-authenticator.html)
-
-* [Install or update Azure CLI to version 2.15.0 and above](https://docs.microsoft.com/en-us/cli/azure/install-azure-cli?view=azure-cli-latest). Use the below command to check your current installed version.
+- [Install or update Azure CLI to version 2.36.0 and above](https://docs.microsoft.com/cli/azure/install-azure-cli?view=azure-cli-latest). Use the below command to check your current installed version.
 
   ```shell
   az --version
   ```
 
-* [Create a free Amazon Web Services account](https://aws.amazon.com/free/) if you don't already have one.
+- [Install](https://docs.aws.amazon.com/cli/latest/userguide/cli-chap-install.html) and [Configure](https://docs.aws.amazon.com/cli/latest/userguide/cli-chap-configure.html#cli-quick-configuration) AWS CLI.
 
-* [Install Terraform >=0.15](https://learn.hashicorp.com/terraform/getting-started/install.html)
+- [Create a free Amazon Web Services account](https://aws.amazon.com/free/) if you don't already have one.
 
-* Create Azure service principal (SP)
+- [Install Terraform >=1.0](https://learn.hashicorp.com/terraform/getting-started/install.html)
 
-  To be able to complete the scenario and its related automation, Azure service principal assigned with the “Contributor” role is required. To create it, login to your Azure account run the below command (this can also be done in [Azure Cloud Shell](https://shell.azure.com/)).
+- Create Azure service principal (SP). To deploy this scenario, an Azure service principal assigned with multiple RBAC roles is required:
 
+  - "Contributor" - Required for provisioning Azure resources
+  - "Security admin" - Required for installing Cloud Defender Azure-Arc enabled Kubernetes extension and dismiss alerts
+  - "Security reader" - Required for being able to view Azure-Arc enabled Kubernetes Cloud Defender extension findings
+  - "Monitoring Metrics Publisher" - Required for being Azure Arc-enabled data services billing, monitoring metrics, and logs management
+
+    To create it login to your Azure account run the below command (this can also be done in [Azure Cloud Shell](https://shell.azure.com/).
+
+    ```shell
+    az login
+    subscriptionId=$(az account show --query id --output tsv)
+    az ad sp create-for-rbac -n "<Unique SP Name>" --role "Contributor" --scopes /subscriptions/$subscriptionId
+    az ad sp create-for-rbac -n "<Unique SP Name>" --role "Security admin" --scopes /subscriptions/$subscriptionId
+    az ad sp create-for-rbac -n "<Unique SP Name>" --role "Security reader" --scopes /subscriptions/$subscriptionId
+    az ad sp create-for-rbac -n "<Unique SP Name>" --role "Monitoring Metrics Publisher" --scopes /subscriptions/$subscriptionId
+    ```
+
+    For example:
+
+    ```shell
+    az login
+    subscriptionId=$(az account show --query id --output tsv)
+    az ad sp create-for-rbac -n "JumpstartArcDataSvc" --role "Contributor" --scopes /subscriptions/$subscriptionId
+    az ad sp create-for-rbac -n "JumpstartArcDataSvc" --role "Security admin" --scopes /subscriptions/$subscriptionId
+    az ad sp create-for-rbac -n "JumpstartArcDataSvc" --role "Security reader" --scopes /subscriptions/$subscriptionId
+    az ad sp create-for-rbac -n "JumpstartArcDataSvc" --role "Monitoring Metrics Publisher" --scopes /subscriptions/$subscriptionId
+    ```
+
+    Output should look like this:
+
+    ```json
+    {
+    "appId": "XXXXXXXXXXXXXXXXXXXXXXXXXXXX",
+    "displayName": "JumpstartArcDataSvc",
+    "password": "XXXXXXXXXXXXXXXXXXXXXXXXXXXX",
+    "tenant": "XXXXXXXXXXXXXXXXXXXXXXXXXXXX"
+    }
+    ```
+
+    > **NOTE: If you create multiple subsequent role assignments on the same service principal, your client secret (password) will be destroyed and recreated each time. Therefore, make sure you grab the correct password**.
+
+    > **NOTE: The Jumpstart scenarios are designed with as much ease of use in-mind and adhering to security-related best practices whenever possible. It is optional but highly recommended to scope the service principal to a specific [Azure subscription and resource group](https://docs.microsoft.com/cli/azure/ad/sp?view=azure-cli-latest) as well considering using a [less privileged service principal account](https://docs.microsoft.com/azure/role-based-access-control/best-practices)**
+
+- Follow the steps [here](https://docs.microsoft.com/azure/azure-arc/kubernetes/custom-locations#enable-custom-locations-on-cluster) or run the command below to retrieve your AAD Tenant Specific ObjectID for the "Custom Locations RP" Enterprise Application needed to onboard Custom Locations on EKS:
+  
   ```shell
-  az login
-  az ad sp create-for-rbac -n "<Unique SP Name>" --role contributor
+  # Note that the APPLICATION ID: bc313c14-388c-4e7d-a58e-70017303ee3b is constant across all tenants
+  az ad sp show --id 'bc313c14-388c-4e7d-a58e-70017303ee3b' --query id -o tsv
   ```
+- Create a resource group
 
-  For example:
+   ```shell
+   az group create --name "Arc-Data-Demo" --location "eastus"
+   ```
+### Create a new AWS IAM Role & Key
 
-  ```shell
-  az ad sp create-for-rbac -n "http://AzureArcK8s" --role contributor
-  ```
+Create AWS User IAM Key. An access key grants programmatic access to your resources which we will be using later in this scenario.
 
-  Output should look like this
+- Navigate to the [IAM Access page](https://console.aws.amazon.com/iam/home#/home).
 
-  ```json
-  {
-  "appId": "XXXXXXXXXXXXXXXXXXXXXXXXXXXX",
-  "displayName": "AzureArcK8s",
-  "name": "http://AzureArcK8s",
-  "password": "XXXXXXXXXXXXXXXXXXXXXXXXXXXX",
-  "tenant": "XXXXXXXXXXXXXXXXXXXXXXXXXXXX"
-  }
-  ```
+    ![Screenshot showing creating an AWS IAM Role & Key](./01.png)
 
-  > **Note: The Jumpstart scenarios are designed with as much ease of use in-mind and adhering to security-related best practices whenever possible. It is optional but highly recommended to scope the service principal to a specific [Azure subscription and resource group](https://docs.microsoft.com/en-us/cli/azure/ad/sp?view=azure-cli-latest) as well considering using a [less privileged service principal account](https://docs.microsoft.com/en-us/azure/role-based-access-control/best-practices)**
+- Select the **Users** from the side menu.
 
-* Enable subscription for the *Microsoft.AzureArcData* resource provider for Azure Arc enabled data services. Registration is an asynchronous process, and registration may take approximately 10 minutes.
+    ![Screenshot showing creating an AWS IAM Role & Key](./02.png)
 
-  ```shell
-  az provider register --namespace Microsoft.AzureArcData
-  ```
+- Select the **User** you want to create the access key for.
 
-  You can monitor the registration process with the following commands:
+    ![Screenshot showing creating an AWS IAM Role & Key](./03.png)
 
-  ```shell
-  az provider show -n Microsoft.AzureArcData -o table
-  ```
+- Select **Security credentials** of the **User** selected.
 
-## Create a new AWS IAM Role & Key
+    ![Screenshot showing creating an AWS IAM Role & Key](./04.png)
 
-Create AWS User IAM Key. An access key grants programmatic access to your resources which we will be using later on in this guide.
+- Under **Access Keys** select **Create Access Keys**.
 
-* Navigate to the [IAM Access page](https://console.aws.amazon.com/iam/home#/home).
+    ![Screenshot showing creating an AWS IAM Role & Key](./05.png)
 
-    ![Create AWS IAM Role & Key](./01.png)
+- In the popup window it will show you the ***Access key ID*** and ***Secret access key***. Save both of these values to configure the **Terraform plan** variables later.
 
-* Select the **Users** from the side menu.
+    ![Screenshot showing creating an AWS IAM Role & Key](./06.png)
 
-    ![Create AWS IAM Role & Key](./02.png)
+- In order to open a RDP session to the Windows Client EC2 instance, an EC2 Key Pair is required. From the *Services* menu, click on *"EC2"*, enter the *Key Pairs* settings from the left sidebar (under the *Network & Security* section) and click on *"Create key pair"* (top-right corner) to create a new key pair.
 
-* Select the **User** you want to create the access key for.
+  ![Screenshot showing creating an EC2 Key Pair](./07.png)
 
-    ![Create AWS IAM Role & Key](./03.png)
+  ![Screenshot showing creating an EC2 Key Pair](./08.png)
 
-* Select **Security credentials** of the **User** selected.
+  ![Screenshot showing creating an EC2 Key Pair](./09.png)
 
-    ![Create AWS IAM Role & Key](./04.png)
+- Provide a meaningful name, for example *terraform*, and click on *"Create key pair"* which will then automatically download the created *pem* file.
 
-* Under **Access Keys** select **Create Access Keys**.
+  ![Screenshot showing creating an EC2 Key Pair](./10.png)
 
-    ![Create AWS IAM Role & Key](./05.png)
+  ![Screenshot showing creating an EC2 Key Pair](./11.png)
 
-* In the popup window it will show you the ***Access key ID*** and ***Secret access key***. Save both of these values to configure the **Terraform plan** variables later.
+  ![Screenshot showing creating an EC2 Key Pair](./12.png)
 
-    ![Create AWS IAM Role & Key](./06.png)
+- Copy the downloaded *pem* file to where the terraform binaries are located (in your cloned repository directory).
 
-* In order to open a RDP session to the Windows Client EC2 instance, an EC2 Key Pair is required. From the *Services* menu, click on *"EC2"*, enter the *Key Pairs* settings from the left sidebar (under the *Network & Security* section) and click on *"Create key pair"* (top-right corner) to create a new key pair.
+  ![Screenshot showing creating an EC2 Key Pair](./13.png)
 
-  ![Create EC2 Key Pair](./07.png)
-
-  ![Create EC2 Key Pair](./08.png)
-
-  ![Create EC2 Key Pair](./09.png)
-
-* Provide a meaningful name, for example *terraform*, and click on *"Create key pair"* which will then automatically download the created *pem* file.
-
-  ![Create EC2 Key Pair](./10.png)
-
-  ![Create EC2 Key Pair](./11.png)
-
-  ![Create EC2 Key Pair](./12.png)
-
-* Copy the downloaded *pem* file to where the terraform binaries are located (in your cloned repository directory).
-
-  ![Create EC2 Key Pair](./13.png)
-
-  > **Note: EC2 Key Pairs are regional.**
+  > **NOTE: EC2 Key Pairs are regional.**
 
 ## Automation Flow
 
 For you to get familiar with the automation and deployment flow, below is an explanation.
 
-* User is editing and exporting Terraform runtime environment variables, AKA *TF_VAR* (1-time edit). The variables values are being used throughout the deployment.
+- User is editing the Terraform runtime environment variables in the _terraform.tfvars_ file (1-time edit). The variables are being used throughout the deployment.
 
-* User deploys the Terraform plan which will deploy the EKS cluster and the EC2 Windows Client instance as well as an Azure resource group. The Azure resource group is required to host the Azure Arc services you will be able to deploy such as Azure SQL Managed Instance and PostgreSQL Hyperscale.
+- [Screenshot showing creating the main Terraform plan](https://github.com/microsoft/azure_arc/tree/main/azure_arc_data_jumpstart/eks/terraform/main.tf) will initiate the deployment of the other modules:
 
-* In addition, the plan will copy the EKS *kubeconfig* file as well as the *configmap.yml* file (which is responsible for having the EKS nodes communicate with the cluster control plane) on to the Windows instance.
+  - [_clientVM_](https://github.com/microsoft/azure_arc/tree/main/azure_arc_data_jumpstart/eks/terraform/modules/clientVM/main.tf) - Deploys the client Windows VM. This is where all user interactions with the environment are made from.
+  - [_cluster_](https://github.com/microsoft/azure_arc/tree/main/azure_arc_data_jumpstart/eks/terraform/modules/cluster/main.tf) - Deploys the EKS cluster where all the Azure Arc data services will be deployed.
+  - [workers](https://github.com/microsoft/azure_arc/tree/main/azure_arc_data_jumpstart/eks/terraform/modules/workers/main.tf) - Deploys the EKS cluster's worker nodes.
 
-* As part of the Windows Server 2019 VM deployment, there are 3 scripts executions:
-
-  1. *azure_arc.ps1* script will be created automatically as part of the Terraform plan runtime and is responsible on injecting the *TF_VAR* variables values on to the Windows instance which will then be used in both the *ClientTools* and the *LogonScript* scripts.
-
-  2. *ClientTools.ps1* script will run at the Terraform plan runtime Runtime and will:
-      * Create the *ClientTools.log* file  
-      * Install the required tools – az cli, az cli Powershell module, kubernetes-cli, aws-iam-authenticator, Visual C++ Redistributable (Chocolaty packages)
-      * Download Azure Data Studio & Azure Data CLI
-      * Download the *DC_Cleanup* and *DC_Deploy* Powershell scripts
-      * Create the logon script
-      * Create the Windows schedule task to run the logon script at first login
-
-  3. *LogonScript.ps1* script will run on user first logon to Windows and will:
-      * Create the *LogonScript.log* file
-      * Install Azure Data Studio & Azure Data CLI
-      * Install the Azure Data Studio Azure Data CLI, Azure Arc & PostgreSQL extensions
-      * Apply the *configmap.yml* file on the EKS cluster
-      * Create the *azdata* config file in user Windows profile
-      * Create the Azure Data Studio desktop shortcut
-      * Open another Powershell session which will execute a command to watch the deployed Azure Arc Data Controller Kubernetes pods
-      * Deploy the Arc Data Controller using the *TF_VAR* variables values
-      * Unregister the logon script Windows schedule task so it will not run after first login
+- User remotes into client Windows VM, which automatically kicks off the DataServicesLogonScript PowerShell script that deploy and configure Azure Arc-enabled data services on the EKS cluster including the data controller.
 
 ## Deployment
 
-As mentioned, the Terraform plan will deploy an EKS cluster, the Azure Arc Data Controller on that cluster and an EC2 Windows Server 2019 Client instance.
+As mentioned, the Terraform plan will deploy an EKS cluster, the Azure Arc Data Controller on that cluster and an EC2 Windows Server 2022 Client instance.
 
-* Before running the Terraform plan, edit the below *TF_VAR* values and export it (simply copy/paste it after you finished edit these). An example *TF_VAR* shell script file is located [here](https://github.com/microsoft/azure_arc/blob/main/azure_arc_data_jumpstart/eks/dc_vanilla/terraform/example/TF_VAR_example.sh)
+- Before running the Terraform plan, create a terraform.tfvars file in the root of the terraform folder and supply some values for your environment.
 
-  ![Export environment variables](./14.png)
-
-  * *export TF_VAR_AWS_ACCESS_KEY_ID*='Your AWS Access Key ID (Created in the prerequisites section)'
-  * *export TF_VAR_AWS_SECRET_ACCESS_KEY*='Your AWS Secret Key (Created in the prerequisites section)'
-  * *export TF_VAR_key_name*='Your AWS Key Pair name (Created in the prerequisites section)'
-  * *export TF_VAR_key_pair_filename*='Your AWS Key Pair *.pem filename (Created in the prerequisites section)'
-  * *export TF_VAR_aws_region*='Your AWS region where resources will get deployed' (Since key pairs are regional, make sure both AWS region and availability zone matches the ones where the key pair was created)
-  * *export TF_VAR_aws_availabilityzone*='Your AWS availability zone' (Since key pairs are regional, make sure both AWS region and availability zone matches the ones where the key pair was created)
-  * *export TF_VAR_SPN_CLIENT_ID*='Your Azure service principal name'
-  * *export TF_VAR_SPN_CLIENT_SECRET*='Your Azure service principal password'
-  * *export TF_VAR_SPN_TENANT_ID*='Your Azure tenant ID'
-  * *export TF_VAR_SPN_AUTHORITY*=*https://login.microsoftonline.com* **Do not change**
-  * *export TF_VAR_AZDATA_USERNAME*='Azure Arc Data Controller admin username'
-  * *export TF_VAR_AZDATA_PASSWORD*='Azure Arc Data Controller admin password' (The password must be at least 8 characters long and contain characters from three of the following four sets: uppercase letters, lowercase letters, numbers, and symbols)
-  * *export TF_VAR_ARC_DC_NAME*='Azure Arc Data Controller name' (The name must consist of lowercase alphanumeric characters or '-', and must start and end with a alphanumeric character. This name will be used for k8s namespace as well)
-  * *export TF_VAR_ARC_DC_SUBSCRIPTION*='Azure Arc Data Controller Azure subscription ID'
-  * *export TF_VAR_ARC_DC_RG*='Azure resource group where all future Azure Arc resources will be deployed'
-  * *export TF_VAR_ARC_DC_REGION*='Azure location where the Azure Arc Data Controller resource will be created in Azure' (Currently, supported regions supported are eastus, eastus2, centralus, westus2, westeurope, southeastasia)
-
-    > **Note: If you are running in a PowerShell environment, to set the Terraform environment variables, use the _Set-Item -Path env:_ prefix (see example below)**
-
-    ```powershell
-    Set-Item -Path env:TF_VAR_AWS_ACCESS_KEY_ID
-    ```
-
-* Navigate to the folder that has Terraform binaries.
-
-  ```shell
-  cd azure_arc_data_jumpstart/eks/dc_vanilla/terraform
+   ```HCL
+    AWS_ACCESS_KEY_ID      = "ZFTIFC443FTFDEZ5TKNR"
+    AWS_SECRET_ACCESS_KEY  = "fakeSecretValue1dfd343sd5712adfddjh"
+    AWS_DEFAULT_REGION     = "us-west-1"
+    azureLocation          = "eastus"
+    spnClientId            = "1414133c-9786-53a4-b231-f87c143ebdb1"
+    spnClientSecret        = "fakeSecretValue123458125712ahjeacjh"
+    spnTenantId            = "33572583-d294-5b56-c4e6-dcf9a297ec17"
+    subscriptionId         = "33987583-A984-5C87-T4e3-POf7a397ec17"
+    resourceGroup          = "Arc-Data-Demo"
+    workspaceName          = "la-arc-001"
+    deploySQLMI            = false
+    SQLMIHA                = false
+    deployPostgreSQL       = false
+    customLocationObjectId = "649cb28f-bc13-492a-9470-c8bf01fa8eeb"
   ```
 
-* Run the ```terraform init``` command which is used to initialize a working directory containing Terraform configuration files and load the required Terraform providers.
+- Variable reference:
 
-  ![terraform init](./15.png)
+  - **_`AWS_ACCESS_KEY_ID`_** - Your AWS access key.
+  - **_`AWS_SECRET_ACCESS_KEY`_** - Your AWS secret access key.
+  - **_`AWS_DEFAULT_REGION`_** - AWS location code (e.g. 'us-west-1', 'us-east-2', etc.).
+  - **_`azureLocation`_** - Azure location code (e.g. 'eastus', 'westus2', etc.).
+  - **_`spnClientId`_** - Your Azure service principal id.
+  - **_`spnClientSecret`_** - Your Azure service principal secret.
+  - **_`spnTenantId`_** - Your Azure tenant id.
+  - **_`subscriptionId`_** - Your Azure subscription Id.
+  - **_`resourceGroup`_** - Resource group which will contain all of the Azure Arc data services resources.
+  - **_`workspaceName`_** - Unique name for the ArcBox Log Analytics workspace.
+  - _`deploySQLMI`_ - Boolean that sets whether or not to deploy SQL Managed Instance, for this data controller vanilla scenario we leave it set to _**false**_.
+  - _`SQLMIHA`_ - Boolean that sets whether or not to deploy SQL Managed Instance with high-availability (business continuity) configurations, for this data controller vanilla scenario we leave it set to _**false**_.
+  - _`deployPostgreSQL`_ - Boolean that sets whether or not to deploy PostgreSQL, for this data controller vanilla scenario we leave it set to _**false**_.
+  - **_`customLocationObjectId`_** - The Azure AD application used by Azure Arc service retrieved in the prerequisites section.
+  
+> **NOTE: Any variables in bold are required. If any optional parameters are not provided, defaults will be used.**
 
-* (Optional but recommended) Run the ```terraform plan``` command to make sure everything is configured properly.
+- Now you will deploy the Terraform file. Navigate to the local cloned [deployment folder](https://github.com/microsoft/azure_arc/tree/main/azure_arc_data_jumpstart/eks/terraform) and run the commands below:
 
-  ![terraform plan](./16.png)
+  ```shell
+  terraform init
+  terraform plan -out=infra.out
+  terraform apply "infra.out"
+  ```
+> **NOTE: The deployment time for this scenario can take ~20-35min**
 
-* Run the ```terraform apply --auto-approve``` command and wait for the plan to finish. **Runtime for deploying all the AWS resources for this plan is ~30min.**
+- Example output from `terraform init`:
 
-* Once completed, the plan will output a decrypted password for your Windows Client instance. Before connecting to the Client instance, you can review the EKS cluster and the EC2 instances created. Notice how 3 instances were created; 2 EKS nodes and the Client instance.
+  ![Screenshot showing creating the terraform init command output](./14.png)
 
-  ![terraform apply](./17.png)
+- Example output from `terraform plan -out=infra.out`:
 
-  ![New EKS cluster](./18.png)
+  ![Screenshot showing creating the terraform plan command output](./15.png)
 
-  ![New EKS cluster](./19.png)
+- Once completed, the plan will output a decrypted password for your Windows Client instance that you will use to RDP into it. Before connecting to the Client instance, you can review the EKS cluster and the EC2 instances created. Notice how 4 instances were created; 3 EKS nodes and the Client instance.
 
-  ![New EC2 instances](./20.png)
+  ![Screenshot showing creating the terraform apply command output](./16.png)
 
-  ![New EC2 instances](./21.png)
+  ![Screenshot showing creating the new EKS cluster](./17.png)
 
-  ![New EC2 instances](./22.png)
+  ![Screenshot showing creating the new EKS cluster](./18.png)
 
-* In the Azure Portal, a new empty Azure resource group was created which will be used for Azure Arc Data Controller and the other data services you will be deploying in the future.
+  ![Screenshot showing creating the new EC2 instances](./19.png)
 
-  ![New empty Azure resource group](./23.png)
+  ![Screenshot showing creating the new EC2 instances](./20.png)
+
+  ![Screenshot showing creating the new EC2 instances](./21.png)
 
 ## Windows Login & Post Deployment
 
-Now that we have both the EKS cluster and the Windows Server Client instance created, it is time to login to the Client VM.
+- Now that the first phase of the automation is completed, it is time to RDP to the client VM. Select the Windows instance, click *"Connect"* and download the Remote Desktop file.
 
-* Select the Windows instance, click *"Connect"* and download the Remote Desktop file.
+  ![Screenshot showing starting an RDP session to the Client instance](./22.png)
 
-  ![RDP to the Client instance](./24.png)
+  ![Screenshot showing starting an RDP session to the Client instance](./23.png)
 
-  ![RDP to the Client instance](./25.png)
+- Using the decrypted password generated from the plan output, RDP the Windows instance. In case you need to get the password later, use the ```terraform output``` command to re-present the plan output.
 
-  ![RDP to the Client instance](./26.png)
+- At first login, as mentioned in the "Automation Flow" section above, the [_DataServicesLogonScript_](https://github.com/microsoft/azure_arc/tree/main/azure_arc_data_jumpstart/eks/terraform/artifacts/DataServicesLogonScript.ps1) PowerShell logon script will start it's run.
 
-* Using the decrypted password, RDP the Windows instance. In case you need to get the password later, use the ```terraform output``` command to re-present the plan output.
+- Let the script to run its course and **do not close** the PowerShell session, this will be done for you once completed. Once the script will finish it's run, the logon script PowerShell session will be closed, the Windows wallpaper will change and the Azure Arc Data Controller will be deployed on the cluster and be ready to use.
 
-* At first login, as mentioned in the "Automation Flow" section, a logon script will get executed. This script was created as part of the automated deployment process.
 
-* Let the script to run it's course and **do not close** the PowerShell session, this will be done for you once completed. You will notice that the Azure Arc Data Controller gets deployed on the EKS cluster. **The logon script run time is approximately 10min long**.
+    ![Screenshot showing the PowerShell logon script run](./24.png)
 
-    Once the script will finish it's run, the logon script PowerShell session will be close and the Azure Arc Data Controller will be deployed on the EKS cluster and be ready to use.
+    ![Screenshot showing the PowerShell logon script run](./25.png)
 
-    ![PowerShell login script run](./27.png)
+    ![Screenshot showing the PowerShell logon script run](./26.png)
 
-    ![PowerShell login script run](./28.png)
+    ![Screenshot showing the PowerShell logon script run](./27.png)
 
-    ![PowerShell logon script run](./29.png)
+    ![Screenshot showing the PowerShell logon script run](./28.png)
 
-    ![PowerShell login script run](./30.png)
+    ![Screenshot showing the PowerShell logon script run](./29.png)
 
-    ![PowerShell login script run](./31.png)
+    ![Screenshot showing the PowerShell logon script run](./30.png)
 
-    ![PowerShell logon script run](./32.png)
+    ![Screenshot showing the PowerShell logon script run](./31.png)
 
-  <!-- > **Note: Currently, Azure Arc enabled data services is in [public preview](https://docs.microsoft.com/en-us/azure/azure-arc/data/release-notes) and features are subject to change. As such, the release being used in this scenario does not support the projection of Azure Arc data services resources in the Azure portal**.
+    ![Screenshot showing the post-run desktop](./32.png)
 
-    ![Data Controller in a resource group](./33.png)
+- Since this scenario is deploying the Azure Arc Data Controller, you will also notice additional newly deployed Azure resources in the resources group (at this point you should have **4 various Azure resources deployed**.
 
-    ![Data Controller resource](./34.png) -->
+  - _Azure Arc-enabled Kubernetes cluster_ - Azure Arc-enabled data services deployed in directly connected are using this type of resource in order to deploy the data services [cluster extension](https://docs.microsoft.com/azure/azure-arc/kubernetes/conceptual-extensions) as well as for using Azure Arc [Custom locations](https://docs.microsoft.com/azure/azure-arc/kubernetes/conceptual-custom-locations).
 
-* Using PowerShell, login to the Data Controller and check it's health using the below commands.
+  - _Custom location_ - Provides a way for tenant administrators to use their Azure Arc-enabled Kubernetes clusters as target locations for deploying Azure services instances.
 
-  ```shell
-  azdata login --namespace $env:ARC_DC_NAME
-  azdata arc dc status show
-  ```
+  - _Azure Arc Data Controller_ - The data controller that is now deployed on the Kubernetes cluster.
 
-  ![azdata login](./35.png)
+    ![Screenshot showing additional Azure resources in the resource group](./33.png)
 
-* Another tool automatically deployed is Azure Data Studio along with the *Azure Data CLI*, the *Azure Arc* and the *PostgreSQL* extensions. Using the Desktop shortcut created for you, open Azure Data Studio and click the Extensions settings to see both extensions.
+- As part of the automation, Azure Data Studio is installed along with the _Azure Data CLI_, _Azure CLI_, _Azure Arc_ and the _PostgreSQL_ extensions. Using the Desktop shortcut created for you, open Azure Data Studio and click the Extensions settings to see the installed extensions.
 
-  ![Azure Data Studio shortcut](./36.png)
+  ![Screenshot showing Azure Data Studio shortcut](./34.png)
 
-  ![Azure Data Studio extension](./37.png)
+  ![Screenshot showing Azure Data Studio extensions](./35.png)
 
-## Cleanup
+## Cluster extensions
 
-* To delete the Azure Arc Data Controller and all of it's Kubernetes resources, run the *DC_Cleanup.ps1* PowerShell script located in *C:\tmp* on the Windows Client instance. At the end of it's run, the script will close all PowerShell sessions. **The Cleanup script run time is ~2-3min long**.
+In this scenario, two Azure Arc-enabled Kubernetes cluster extensions were installed:
 
-  ![DC_Cleanup PowerShell script run](./38.png)
+- _azuremonitor-containers_ - The Azure Monitor Container Insights cluster extension. To learn more about it, you can check our Jumpstart ["Integrate Azure Monitor for Containers with GKE as an Azure Arc Connected Cluster using Kubernetes extensions](https://azurearcjumpstart.io/azure_arc_jumpstart/azure_arc_k8s/day2/gke/gke_monitor_extension/) scenario.
 
-## Re-Deploy Azure Arc Data Controller
+- _arc-data-services_ - The Azure Arc-enabled data services cluster extension that was used throughout this scenario in order to deploy the data services infrastructure.
 
-* In case you deleted the Azure Arc Data Controller from the EKS cluster, you can re-deploy it by running the *DC_Deploy.ps1* PowerShell script located in *C:\tmp* on the Windows Client instance. **The Deploy script run time is approximately ~3-4min long**.
+In order to view these cluster extensions, click on the Azure Arc-enabled Kubernetes resource Extensions settings.
 
-  ![Re-Deploy Azure Arc Data Controller PowerShell script](./39.png)
+  ![Screenshot showing the Azure Arc-enabled Kubernetes cluster extensions settings](./36.png)
 
+  ![Screenshot showing the Azure Arc-enabled Kubernetes installed extensions](./37.png)
 ## Delete the deployment
 
-To completely delete the environment, follow the below steps:
+- If you want to delete the entire Azure environment, simply delete the deployment resource group from the Azure portal.
 
-* on the Windows Client instance, run the *DC_Cleanup.ps1* PowerShell script.
+    ![Screenshot showing Azure resource group deletion](./38.png)
 
-* Run the ```terraform destroy --auto-approve``` which will delete all of the AWS resources as well as the Azure resource group. **The *terraform destroy* run time is approximately ~5-10min long**.
+- If you want to delete the entire environment, use the _`terraform destroy`_ to delete all of the AWS resources.
 
-  ![terraform destroy](./40.png)
+  ```shell
+  terraform destroy --auto-approve
+  ```
+
+  ![Screenshot showing the deletion of all AWS resources](./39.png)
+
+  > **NOTE: Because the following resources were created by EKS that creates internal AWS dependencies that Terraform has no knowledge of from our plan, we need to delete the resources from AWS console as `terraform destroy` is cleaning up - this allows us to avoid dependency conflicts and ongoing billing from orphaned resources such as EKS Volumes.**
+
+- While the `destroy` command is running, delete any new Load Balancers created as EKS Services (`EC2 > Load Balancing > Load Balancers`) that are deployed in AWS from the Console:
+
+  ![Screenshot showing the Deletion of Load Balancers](./40.png)
+
+- While the `destroy` command is running, delete any new Elastic Block Stores, created as EKS Persistent Volumes (`EC2 > Elastic Block Store > Volumes`) that are deployed in AWS from the Console:
+
+  ![Screenshot showing the Deletion of Elastic Block Stores](./41.png)

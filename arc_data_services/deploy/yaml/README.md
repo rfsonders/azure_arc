@@ -2,37 +2,37 @@
 
 This folder contains deployment related scripts for Azure Arc enabled data services. These scripts can be applied using kubectl command-line tool. If you are performing any operations on the services using the [Azure Data CLI](https://docs.microsoft.com/en-us/sql/azdata/install/deploy-install-azdata?toc=%2Fazure%2Fazure-arc%2Fdata%2Ftoc.json&bc=%2Fazure%2Fazure-arc%2Fdata%2Fbreadcrumb%2Ftoc.json&view=sql-server-ver15) tool then ensure that you have the latest version always.
 
-## Security Context Constraint for OpenShift deployments
-
-The deployment of Azure Arc enabled data services on OpenShift cluster requires configuration of custom Security Context Constraint. The following yaml files should be used to create & configure the custom Security Context Constraint object. The yaml files should be applied in the order specified below. The files can be applied using the OC or kubectl CLI.
-
-1. [Create custom Security Context Constraint](./arc-data-scc.yaml)
-This yaml file creates the OpenShift custom Security Context Constraint (SCC) object for Azure Arc enabled data services. Creation of the SCC requires cluster level edit permission.
-
-1. [Configure namespace for the custom Security Context Constraint](./arc-data-scc-role-rolebinding.yaml)
-This yaml file creates the Kubernetes role and rolebinding necessary in the namespace where you are creating the Azure ARc enabled data service resources. Creation of the role and rolebinding requires namespace level edit permissions.
-
 ## Deployment yaml files for kube-native operations
 
 The following yaml files can be used to create Azure Arc enabled data services using kubectl CLI. The yaml files can be applied in the order specified below and modifying the parameters based on your Kubernetes environment.
 
-1. [Create Custom Resource Definitions](./custom-resource-definitions.yaml)
-This yaml file creates custom resource definitions (CRDs) for data controller, SQL Managed Instance and PostgreSQL Hyperscale resources.
+1. [Create Deployer Service Account](../../arcdata-deployer.yaml)
+This yaml file creates a deployer service account in a specified namespace with proper RBAC. This service account will be used in the next step to run a "bootstrap" job. Replace the placeholder `{{NAMESPACE}}` in the file before applying.
+
+1. [Optional: Configure Installer User Account](./arcdata-installer.yaml)
+This yaml file configures the permissions needed for a user account to install the bootstrapper and data controller. Replace the placeholder `{{INSTALLER_USERNAME}}` in the file before applying.
 
 1. [Create Bootstrapper](./bootstrapper.yaml)
-This yaml file creates bootstrapper pad in a specified namespace along with the service account and bootstrapper role.
+This yaml file creates "bootstrapper" job to install the bootstrapper along with related cluster-scope and namespaced objects, such as custom resource definitions (CRDs), the service account and bootstrapper role. This step can also be run by a low-privilege installer user account. The [unistall.yaml](./uninstall.yaml) is for uninstalling the bootstrapper and related Kubernetes objects, except the CRDs.
 
-1. [Create data controller login secret](./controller-login-secret.yaml)
-This yaml file creates a secret containing the data controller administrator username and password. These credentials will be used to perform operations via the azdata CLI. The secret values should be base64 encoded strings. See instructions under [Creating base64 encoded strings](#creating-base64-encoded-strings).
+1. [Create data controller](./data-controller.yaml)
+This yaml file creates the data controller resources. The secret values should be base64 encoded strings. See instructions under [Creating base64 encoded strings](#creating-base64-encoded-strings). This step can also be run by a low-privilege installer user account.
+
+Alternatively, the bootstrapper and data controller can be created following these steps without configuring a low-privilege installer user account.
+
+1. [Create Bootstrapper](./bootstrapper-unified.yaml)
+This yaml file creates the a deployer service account and bootstrapper. Replace the placeholder `{{NAMESPACE}}` in the file before applying.
 
 1. [Create data controller](./data-controller.yaml)
 This yaml file creates the data controller resources.
 
+For data services:
+
 1. [Create Azure SQL Managed Instance](./sqlmi.yaml)
 This yaml file creates the SQL Managed Instance resource(s). The administrator username and password for the Managed instance is specified using a secret. The secret should be named using the format *\<instance-name\>-login-secret*. The secret values should be base64 encoded strings. See instructions under [Creating base64 encoded strings](#creating-base64-encoded-strings).
 
-1. [Create Azure PostgreSQL Hyperscale](./postgresql.yaml)
-This yaml file creates the PostgreSQL Hyperscale resource(s).The administrator username and password for the PostgreSQL instance is specified using a secret. The secret should be named using the format *\<instance-name\>-login-secret*. The secret values should be base64 encoded strings. See instructions under [Creating base64 encoded strings](#creating-base64-encoded-strings).
+1. [Create Azure PostgreSQL Server](./postgresql.yaml)
+This yaml file creates the PostgreSQL server resource(s).The administrator username and password for the PostgreSQL instance is specified using a secret. The secret should be named using the format *\<instance-name\>-login-secret*. The secret values should be base64 encoded strings. See instructions under [Creating base64 encoded strings](#creating-base64-encoded-strings).
 
 ### Creating base64 encoded strings
 
@@ -53,7 +53,7 @@ echo -n this is my password|base64
 The base64 encoded values can be decoded using similar steps. On Windows, the following PowerShell snippet can be used to decode the base64 encoded string:
 
 ```powershell
-$ENCODED_PASSWORD = 'dGhpcyBpcyBteSBwYXNzd29yZA=='
+$ENCODED_PASSWORD = '<YourEncodedPasswordHere>'
 $PASSWORD = [System.Text.Encoding]::UTF8.GetString([System.Convert]::FromBase64String($ENCODED_PASSWORD))
 Write-Output $PASSWORD
 ```
@@ -61,7 +61,7 @@ Write-Output $PASSWORD
 On Linux, the following bash shell command can be used to decode a base64 encoded string:
 
 ```bash
-echo -n dGhpcyBpcyBteSBwYXNzd29yZA==|base64 -d
+echo -n <YourEncodedPasswordHere>|base64 -d
 ```
 
 ## [RBAC samples](./rbac)

@@ -2,7 +2,7 @@
 type: docs
 title: "Azure Red Hat OpenShift"
 linkTitle: "Azure Red Hat OpenShift"
-weight: 8
+weight: 5
 description: >-
-  The scenario in this section will guide on creating an Azure Red Hat OpenShift (ARO) v4 Kubernetes cluster and onboard it as an Azure Arc enabled Kubernetes cluster in an automated fashion.
+  If you do not yet have an Azure Red Hat OpenShift cluster, the scenarios in this section will guide you on how to create an Azure-managed OpenShift cluster in an automated fashion and onboard it as an Azure Arc-enabled Kubernetes cluster.
 ---

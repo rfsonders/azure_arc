@@ -10,7 +10,7 @@
  }
  
  # Run connect command
- & "$env:ProgramW6432\AzureConnectedMachineAgent\azcmagent.exe" connect `
+ & "$Env:ProgramW6432\AzureConnectedMachineAgent\azcmagent.exe" connect `
  --service-principal-id $spnClientId `
  --service-principal-secret $spnClientSecret `
  --resource-group $resourceGroup `
@@ -19,6 +19,6 @@
  --subscription-id $subscriptionId `
  --cloud "AzureCloud" `
  --tags "Project=jumpstart_arcbox" `
- --correlation-id "d009f5dd-dba8-4ac7-bac9-b54ef3a6671a"
+ --correlation-id "d009f5dd-dba8-4ac7-bac9-b54ef3a6671a" # Do no change!
  
  if($LastExitCode -eq 0){Write-Host -ForegroundColor yellow "To view your onboarded server(s), navigate to https://ms.portal.azure.com/#blade/HubsExtension/BrowseResource/resourceType/Microsoft.HybridCompute%2Fmachines"}
